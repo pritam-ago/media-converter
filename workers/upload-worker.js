@@ -1,10 +1,14 @@
-import { parentPort, workerData } from "worker_threads";
+import { parentPort, workerData, Worker } from "worker_threads";
 import { S3Client, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
-// 🔹 Initialize S3 Client
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -13,16 +17,33 @@ const s3 = new S3Client({
   },
 });
 
-// 🔹 Upload File in Parts
+const uploadPart = async ({ fileKey, uploadId, partNumber, chunk }) => {
+  try {
+    const { ETag } = await s3.send(
+      new UploadPartCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: fileKey,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+        Body: chunk,
+      })
+    );
+    console.log(`✅ Part ${partNumber} uploaded for ${fileKey}`);
+    return { PartNumber: partNumber, ETag };
+  } catch (error) {
+    console.error(`❌ Part ${partNumber} failed:`, error);
+    return null;
+  }
+};
+
 const uploadFile = async (file) => {
   try {
     const fileKey = `uploads/${Date.now()}-${file.originalname}`;
-    const partSize = 5 * 1024 * 1024; // 5MB per part
+    const partSize = 5 * 1024 * 1024; 
     const totalParts = Math.ceil(file.buffer.length / partSize);
-    
-    console.log(`📌 Uploading ${file.originalname} in ${totalParts} parts...`);
 
-    // 🔹 Step 1: Start Multipart Upload
+    console.log(`📌 Uploading ${file.originalname} in ${totalParts} parts using parallel threads...`);
+
     const { UploadId } = await s3.send(
       new CreateMultipartUploadCommand({
         Bucket: process.env.AWS_BUCKET_NAME,
@@ -30,41 +51,39 @@ const uploadFile = async (file) => {
       })
     );
 
-    // 🔹 Step 2: Upload Parts
-    let uploadedParts = [];
+    const uploadPromises = [];
     let partNumber = 1;
 
     for (let i = 0; i < file.buffer.length; i += partSize) {
       const chunk = file.buffer.slice(i, i + partSize);
 
-      const { ETag } = await s3.send(
-        new UploadPartCommand({
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: fileKey,
-          UploadId,
-          PartNumber: partNumber,
-          Body: chunk,
+      uploadPromises.push(
+        new Promise((resolve) => {
+          const worker = new Worker(__filename, {
+            workerData: { fileKey, uploadId: UploadId, partNumber, chunk },
+          });
+
+          worker.on("message", resolve);
+          worker.on("error", (error) => resolve(null));
         })
       );
 
-      console.log(`✅ Part ${partNumber} uploaded for ${file.originalname}`);
-      uploadedParts.push({ PartNumber: partNumber, ETag });
       partNumber++;
     }
 
-    // 🔹 Step 3: Complete Multipart Upload
+    const uploadedParts = (await Promise.all(uploadPromises)).filter((part) => part !== null);
+
     await s3.send(
       new CompleteMultipartUploadCommand({
         Bucket: process.env.AWS_BUCKET_NAME,
         Key: fileKey,
         UploadId,
-        MultipartUpload: { Parts: uploadedParts },
+        MultipartUpload: { Parts: uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber) },
       })
     );
 
     console.log(`🎉 Upload completed for ${file.originalname}!`);
 
-    // 🔹 Send Response Back to Main Thread
     parentPort.postMessage({ success: true, fileUrl: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}` });
 
   } catch (error) {
@@ -72,5 +91,8 @@ const uploadFile = async (file) => {
   }
 };
 
-// 🔹 Run Upload
-uploadFile(workerData);
+if (workerData?.chunk) {
+  uploadPart(workerData).then((result) => parentPort.postMessage(result));
+} else {
+  uploadFile(workerData);
+}

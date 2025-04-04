@@ -19,12 +19,11 @@ router.post("/multiple", upload.array("files", 10), async (req, res) => {
     return res.status(400).json({ error: "No files uploaded!" });
   }
 
-  console.log(`📌 Starting upload for ${req.files.length} files...`);
+  console.log(`Starting upload for ${req.files.length} files...`);
 
   const uploadPromises = req.files.map((file) => {
     return new Promise((resolve) => {
       const worker = new Worker(path.join(__dirname, "../workers/upload-worker.js"), { workerData: file });
-
       worker.on("message", resolve);
       worker.on("error", (error) => resolve({ success: false, error: error.message }));
     });

@@ -3,11 +3,15 @@ import { S3Client, CreateMultipartUploadCommand, UploadPartCommand, CompleteMult
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { v4 as uuidv4 } from 'uuid';
+
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const sessionId = uuidv4();
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -38,7 +42,7 @@ const uploadPart = async ({ fileKey, uploadId, partNumber, chunk }) => {
 
 const uploadFile = async (file) => {
   try {
-    const fileKey = `uploads/${Date.now()}-${file.originalname}`;
+    const fileKey = `${sessionId}/${Date.now()}-${file.originalname}`;
     const partSize = 5 * 1024 * 1024; 
     const totalParts = Math.ceil(file.buffer.length / partSize);
 

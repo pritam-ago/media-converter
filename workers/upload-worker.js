@@ -29,6 +29,7 @@ const uploadFile = async ({ file, sessionId }) => {
 
     const uploadedParts = [];
 
+    
     for (let partNumber = 1, i = 0; i < file.buffer.length; i += partSize, partNumber++) {
       const chunk = file.buffer.slice(i, i + partSize);
 

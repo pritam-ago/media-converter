@@ -22,7 +22,7 @@ router.post("/", upload.array("files", 10), async (req, res) => {
   }
 
   const sessionId = req.body.sessionId || uuidv4();
-  console.log(`📁 Upload session started: ${sessionId} (${req.files.length} files)`);
+  console.log(`Upload session started: ${sessionId} (${req.files.length} files)`);
 
   const uploadPromises = req.files.map((file) => {
     return new Promise((resolve) => {
@@ -67,7 +67,7 @@ router.post("/", upload.array("files", 10), async (req, res) => {
   }
 
   res.json({
-    message: "✅ Upload process completed!",
+    message: "Upload process completed!",
     sessionId,
     uploads: results,
   });

@@ -1,21 +1,32 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import uploadRouter from './routes/upload.js';
-import convertRouter from './routes/convert.js';
 import mongoose from 'mongoose';
+import userAuthRouter from './routes/auth.user.js';
+import fileRoutes from './routes/file.routes.js';
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+const corsOptions = {
+  origin: ['*', 'https://kzmgdwzhhmzrrp39ip84.lite.vusercontent.net'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
 
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/upload', uploadRouter);
-app.use('/convert', convertRouter);
+app.use('/api/auth/user', userAuthRouter);
+app.use('/api/files', fileRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
+app.head('/', (req, res) => {
+  res.status(200).send(); 
+});
+
 
 mongoose.connect(process.env.MONGODB_URI)
 .then(() => {

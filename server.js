@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 const corsOptions = {
-  origin: ['https://kzmgdwzhhmzrrp39ip84.lite.vusercontent.net', 'http://localhost:5000'],
+  origin: ['https://kzmgdwzhhmzrrp39ip84.lite.vusercontent.net', 'http://localhost:5000', 'http://192.168.1.7:5000', ' http://172.23.128.1:5000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

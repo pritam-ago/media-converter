@@ -9,6 +9,7 @@ import {
   deleteFolderRecursively
 } from '../utils/s3Helpers.js';
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const uploadFiles = async (req, res) => {
@@ -52,17 +53,42 @@ export const createFolder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-export const listFiles = async (req, res) => {
+ 
+ export const listFiles = async (req, res) => {
   const userId = req.user.id;
-  const prefix = `users/${userId}/${req.query.prefix || ''}`;
+  let prefix = `users/${userId}/`;
+  if (req.query.prefix) {
+    prefix += req.query.prefix.endsWith('/') ? req.query.prefix : `${req.query.prefix}/`;
+  }
+
   try {
-    const data = await listObjects(prefix);
-    res.status(200).json(data);
+    const { files, folders } = await listObjects(prefix);
+
+    const folderList = folders.map((folderKey) => {
+      return {
+        type: 'folder',
+        name: folderKey.split('/').slice(-2, -1)[0], // Last folder name before slash
+        key: folderKey,
+      };
+    });
+
+    const fileList = files
+      .filter((item) => item.Key !== prefix) // Ignore the "folder" placeholder
+      .map((item) => ({
+        type: 'file',
+        name: item.Key.split('/').pop(),
+        key: item.Key,
+        size: item.Size,
+        lastModified: item.LastModified,
+      }));
+
+    res.status(200).json([...folderList, ...fileList]);
   } catch (err) {
+    console.error('Error listing files:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 export const deleteFileOrFolder = async (req, res) => {
   const userId = req.user.id;

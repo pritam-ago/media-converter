@@ -18,13 +18,16 @@ export const createEmptyFolder = async (Key) => {
 };
 
 export const listObjects = async (Prefix) => {
+  console.log("Listing objects with prefix:", Prefix);  // Add this log to see the exact prefix being used.
   const command = new ListObjectsV2Command({
     Bucket: process.env.AWS_BUCKET_NAME,
     Prefix,
   });
   const response = await s3.send(command);
+  console.log("S3 response:", response);  // Log the S3 response to debug what comes back.
   return response.Contents || [];
 };
+
 
 export const deleteObject = async (Key) => {
   const command = new DeleteObjectCommand({

@@ -35,12 +35,12 @@ export const listObjects = async (Prefix) => {
   const commonPrefixesFolders = responseFolders.CommonPrefixes || [];
   const contents = responseFiles.Contents || [];
 
-  // 🔥 Only get actual files (exclude "folders" with size === 0)
+  
   const files = contents
-    .filter(item => item.Size > 0)
+    .filter(item => item.Key.endsWith('/'))
     .map(item => ({
       Key: item.Key,
-      FileName: item.Key.split('/').pop(), // get the actual file name
+      FileName: item.Key.split('/').pop(),
       Size: item.Size,
       LastModified: item.LastModified,
     }));

@@ -56,7 +56,7 @@ export const createFolder = async (req, res) => {
  
  export const listFiles = async (req, res) => {
   const userId = req.user.id;
-  let prefix = `users/${userId}/`;
+  let prefix = `users/`;
   if (req.query.prefix) {
     prefix += req.query.prefix.endsWith('/') ? req.query.prefix : `${req.query.prefix}/`;
   }

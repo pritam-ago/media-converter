@@ -67,8 +67,8 @@ export const createFolder = async (req, res) => {
     const folderList = folders.map((folderKey) => {
       return {
         type: 'folder',
-        name: folderKey.split('/').slice(-2, -1)[0], // Last folder name before slash
-        key: folderKey,
+        name: folderKey.Key.split('/').slice(-2, -1)[0], // Last folder name before slash
+        key: folderKey.Key,
       };
     });
 
@@ -84,7 +84,7 @@ export const createFolder = async (req, res) => {
 
     res.status(200).json([...folderList, ...fileList]);
   } catch (err) {
-    console.error('Error listing files:', err.message);
+    console.error('Error listing files:', err);
     res.status(500).json({ error: err.message });
   }
 };

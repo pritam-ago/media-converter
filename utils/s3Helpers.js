@@ -18,15 +18,42 @@ export const createEmptyFolder = async (Key) => {
 };
 
 export const listObjects = async (Prefix) => {
-  console.log("Listing objects with prefix:", Prefix);  // Add this log to see the exact prefix being used.
-  const command = new ListObjectsV2Command({
+  const commandFiles = new ListObjectsV2Command({
     Bucket: process.env.AWS_BUCKET_NAME,
     Prefix,
   });
-  const response = await s3.send(command);
-  console.log("S3 response:", response);  // Log the S3 response to debug what comes back.
-  return response.Contents || [];
+
+  const commandFolders = new ListObjectsV2Command({
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Prefix,
+    Delimiter: '/',
+  });
+
+  const responseFolders = await s3.send(commandFolders);
+  const responseFiles = await s3.send(commandFiles);
+
+  const commonPrefixesFolders = responseFolders.CommonPrefixes || [];
+  const contents = responseFiles.Contents || [];
+
+  // 🔥 Only get actual files (exclude "folders" with size === 0)
+  const files = contents
+    .filter(item => item.Size > 0)
+    .map(item => ({
+      Key: item.Key,
+      FileName: item.Key.split('/').pop(), // get the actual file name
+      Size: item.Size,
+      LastModified: item.LastModified,
+    }));
+
+  const folders = commonPrefixesFolders.map(prefix => ({ Key: prefix.Prefix }));
+
+  console.log('files: ', files);
+  console.log('folders: ', folders);
+
+  return { files, folders };
 };
+
+
 
 
 export const deleteObject = async (Key) => {

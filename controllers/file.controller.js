@@ -53,39 +53,23 @@ export const createFolder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
- 
- export const listFiles = async (req, res) => {
+
+export const listFiles = async (req, res) => {
   const userId = req.user.id;
-  let prefix = `users/`;
-  if (req.query.prefix) {
-    prefix += req.query.prefix.endsWith('/') ? req.query.prefix : `${req.query.prefix}/`;
+  let { prefix } = req.query;
+
+  if (prefix && !prefix.endsWith('/')) {
+    prefix += '/';
   }
+  
+  const Prefix = `users/${userId}/${prefix || ''}`;
 
   try {
-    const { files, folders } = await listObjects(prefix);
-
-    const folderList = folders.map((folderKey) => {
-      return {
-        type: 'folder',
-        name: folderKey.Key.split('/').slice(-2, -1)[0], // Last folder name before slash
-        key: folderKey.Key,
-      };
-    });
-
-    const fileList = files
-      .filter((item) => item.Key !== prefix) // Ignore the "folder" placeholder
-      .map((item) => ({
-        type: 'file',
-        name: item.Key.split('/').pop(),
-        key: item.Key,
-        size: item.Size,
-        lastModified: item.LastModified,
-      }));
-
-    res.status(200).json([...folderList, ...fileList]);
+    const { folders, files } = await listObjects(Prefix);
+    res.status(200).json({ folders, files });
   } catch (err) {
-    console.error('Error listing files:', err);
-    res.status(500).json({ error: err.message });
+    console.error("S3 List Error:", err);
+    res.status(500).json({ error: "Failed to list files and folders" });
   }
 };
 

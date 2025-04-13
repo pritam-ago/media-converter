@@ -17,40 +17,37 @@ export const createEmptyFolder = async (Key) => {
   await s3.send(command);
 };
 
-export const listObjects = async (Prefix) => {
-  const commandFiles = new ListObjectsV2Command({
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Prefix,
-  });
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
 
-  const commandFolders = new ListObjectsV2Command({
+export const listObjects = async (Prefix) => {
+  const command = new ListObjectsV2Command({
     Bucket: process.env.AWS_BUCKET_NAME,
     Prefix,
     Delimiter: '/',
   });
 
-  const responseFolders = await s3.send(commandFolders);
-  const responseFiles = await s3.send(commandFiles);
+  const result = await s3.send(command);
 
-  const commonPrefixesFolders = responseFolders.CommonPrefixes || [];
-  const contents = responseFiles.Contents || [];
+  const folders = (result.CommonPrefixes || []).map(cp => ({
+    key: cp.Prefix,
+    name: cp.Prefix.split("/").filter(Boolean).pop(), // Get last folder name
+  }));
 
-  
-  const files = contents
-    .filter(item => item.Key.endsWith('/'))
-    .map(item => ({
-      Key: item.Key,
-      FileName: item.Key.split('/').pop(),
-      Size: item.Size,
-      LastModified: item.LastModified,
+  const files = (result.Contents || [])
+    .filter(obj => obj.Key !== Prefix)
+    .map(obj => ({
+      key: obj.Key,
+      name: obj.Key.split("/").pop(), // Just filename
+      size: formatSize(obj.Size || 0),
     }));
 
-  const folders = commonPrefixesFolders.map(prefix => ({ Key: prefix.Prefix }));
-
-  console.log('files: ', files);
-  console.log('folders: ', folders);
-
-  return { files, folders };
+  return { folders, files };
 };
 
 

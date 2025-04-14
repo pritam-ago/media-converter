@@ -6,7 +6,7 @@ import {
   listObjects,
   deleteObject,
   generateSignedUrl,
-  deleteFolderRecursively
+  deleteFolder
 } from '../utils/s3Helpers.js';
 
 
@@ -41,12 +41,17 @@ export const uploadFiles = async (req, res) => {
 
 export const createFolder = async (req, res) => {
   const userId = req.user.id;
-  const { folderPath } = req.body;
+  const { folderPath, currentFolder } = req.body;
+  
+  const folderPathFinal = currentFolder ? `${currentFolder}/${folderPath}` : `${folderPath}`;
+
 
   if (!folderPath) return res.status(400).json({ message: 'Folder path required' });
-
+  
+  
   try {
-    const key = `users/${userId}/${folderPath.replace(/\/?$/, '/')}`;
+    
+    const key = `users/${userId}/${folderPathFinal.replace(/\/?$/, '/')}`;
     await createEmptyFolder(key);
     res.status(201).json({ message: 'Folder created', key });
   } catch (err) {
@@ -73,7 +78,6 @@ export const listFiles = async (req, res) => {
   }
 };
 
-
 export const deleteFileOrFolder = async (req, res) => {
   const userId = req.user.id;
   const { key, isFolder } = req.body;
@@ -83,7 +87,7 @@ export const deleteFileOrFolder = async (req, res) => {
   const fullKey = `users/${userId}/${key.replace(/^\/+/, '')}`;
   try {
     if (isFolder) {
-      await deleteFolderRecursively(fullKey);
+      await deleteFolder(fullKey);
       res.status(200).json({ message: 'Folder deleted' });
     } else {
       await deleteObject(fullKey);
@@ -108,3 +112,4 @@ export const getSignedUrl = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+

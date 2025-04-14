@@ -4,9 +4,18 @@ import {
   ListObjectsV2Command,
   DeleteObjectCommand,
   DeleteObjectsCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  CopyObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
 
 export const createEmptyFolder = async (Key) => {
   const command = new PutObjectCommand({
@@ -15,14 +24,6 @@ export const createEmptyFolder = async (Key) => {
     Body: '',
   });
   await s3.send(command);
-};
-
-const formatSize = (bytes) => {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
 export const listObjects = async (Prefix) => {
@@ -50,9 +51,6 @@ export const listObjects = async (Prefix) => {
   return { folders, files };
 };
 
-
-
-
 export const deleteObject = async (Key) => {
   const command = new DeleteObjectCommand({
     Bucket: process.env.AWS_BUCKET_NAME,
@@ -61,18 +59,31 @@ export const deleteObject = async (Key) => {
   await s3.send(command);
 };
 
-export const deleteFolderRecursively = async (Prefix) => {
-  const list = await listObjects(Prefix);
-  if (!list.length) return;
+export const deleteFolder = async (folderPrefix) => {
+  const listParams = {
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Prefix: folderPrefix,
+  };
 
-  const command = new DeleteObjectsCommand({
+  const listCommand = new ListObjectsV2Command(listParams);
+  const listedObjects = await s3.send(listCommand);
+
+  if (!listedObjects.Contents || listedObjects.Contents.length === 0) return;
+
+  const deleteParams = {
     Bucket: process.env.AWS_BUCKET_NAME,
     Delete: {
-      Objects: list.map(obj => ({ Key: obj.Key })),
+      Objects: listedObjects.Contents.map(obj => ({ Key: obj.Key })),
     },
-  });
-  await s3.send(command);
-};
+  };
+
+  const deleteCommand = new DeleteObjectsCommand(deleteParams);
+  await s3.send(deleteCommand);
+
+  if (listedObjects.IsTruncated) {
+    await deleteFolder(process.env.AWS_BUCKET_NAME, folderPrefix);
+  }
+}
 
 export const generateSignedUrl = async (Key) => {
   const command = new GetObjectCommand({

@@ -6,7 +6,9 @@ import {
   listObjects,
   deleteObject,
   generateSignedUrl,
-  deleteFolder
+  deleteFolder,
+  copyObject,
+  moveObject
 } from '../utils/s3Helpers.js';
 
 
@@ -113,3 +115,53 @@ export const getSignedUrl = async (req, res) => {
   }
 };
 
+export const copyFile = async (req, res) => {
+  const userId = req.user.id;
+  const { sourceKey, destinationKey } = req.body;
+
+  if (!sourceKey || !destinationKey) return res.status(400).json({ message: 'Source and destination keys are required' });
+
+  const sourceFullKey = `users/${userId}/${sourceKey.replace(/^\/+/, '')}`;
+  const destinationFullKey = `users/${userId}/${destinationKey.replace(/^\/+/, '')}`;
+
+  try {
+    await copyObject(sourceFullKey, destinationFullKey);
+    res.status(200).json({ message: 'File copied successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const moveFile = async (req, res) => {
+  const userId = req.user.id;
+  const { sourceKey, destinationKey } = req.body;
+
+  if (!sourceKey || !destinationKey) return res.status(400).json({ message: 'Source and destination keys are required' });
+
+  const sourceFullKey = `users/${userId}/${sourceKey.replace(/^\/+/, '')}`;
+  const destinationFullKey = `users/${userId}/${destinationKey.replace(/^\/+/, '')}`;
+
+  try {
+    await moveObject(sourceFullKey, destinationFullKey);
+    res.status(200).json({ message: 'File moved successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const renameFileOrFolder = async (req, res) => {
+  const userId = req.user.id;
+  const { oldKey, newKey } = req.body;
+
+  if (!oldKey || !newKey) return res.status(400).json({ message: 'Old and new keys are required' });
+
+  const oldFullKey = `users/${userId}/${oldKey.replace(/^\/+/, '')}`;
+  const newFullKey = `users/${userId}/${newKey.replace(/^\/+/, '')}`;
+
+  try {
+    await moveObject(oldFullKey, newFullKey);
+    res.status(200).json({ message: 'File or folder renamed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

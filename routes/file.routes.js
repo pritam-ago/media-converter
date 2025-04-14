@@ -6,7 +6,10 @@ import {
   createFolder,
   listFiles,
   deleteFileOrFolder,
-  getSignedUrl
+  getSignedUrl,
+  copyFile,
+  moveFile,
+  renameFileOrFolder
 } from '../controllers/file.controller.js';
 
 const router = express.Router();
@@ -17,5 +20,8 @@ router.post('/folder', verifyToken, createFolder);
 router.get('/list', verifyToken, listFiles);
 router.delete('/', verifyToken, deleteFileOrFolder);
 router.get('/url', verifyToken, getSignedUrl);
+router.post('/move', verifyToken, moveFile);
+router.post('/copy', verifyToken, copyFile);
+router.post('/rename', verifyToken, renameFileOrFolder);
 
 export default router;

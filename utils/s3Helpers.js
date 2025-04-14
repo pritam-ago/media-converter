@@ -92,3 +92,17 @@ export const generateSignedUrl = async (Key) => {
   });
   return await getSignedUrl(s3, command, { expiresIn: 60 * 5 });
 };
+
+export const copyObject = async (sourceKey, destinationKey) => {
+  const command = new CopyObjectCommand({
+    Bucket: process.env.AWS_BUCKET_NAME,
+    CopySource: encodeURIComponent(`${process.env.AWS_BUCKET_NAME}/${sourceKey}`),
+    Key: destinationKey,
+  });
+  await s3.send(command);
+};
+
+export const moveObject = async (sourceKey, destinationKey) => {
+  await copyObject(sourceKey, destinationKey);
+  await deleteObject(sourceKey);
+};

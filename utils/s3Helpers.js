@@ -103,6 +103,29 @@ export const copyObject = async (sourceKey, destinationKey) => {
 };
 
 export const moveObject = async (sourceKey, destinationKey) => {
-  await copyObject(sourceKey, destinationKey);
-  await deleteObject(sourceKey);
+  if (sourceKey.endsWith('/')) {
+    const listCommand = new ListObjectsV2Command({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Prefix: sourceKey,
+    });
+
+    const listedObjects = await s3.send(listCommand);
+    if (!listedObjects.Contents || listedObjects.Contents.length === 0) return;
+
+    for (const obj of listedObjects.Contents) {
+      const newObjectKey = obj.Key.replace(sourceKey, destinationKey);
+      await copyObject(obj.Key, newObjectKey);
+    }
+
+    const deleteParams = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Delete: {
+        Objects: listedObjects.Contents.map(obj => ({ Key: obj.Key })),
+      },
+    };
+    await s3.send(new DeleteObjectsCommand(deleteParams));
+  } else {
+    await copyObject(sourceKey, destinationKey);
+    await deleteObject(sourceKey);
+  }
 };

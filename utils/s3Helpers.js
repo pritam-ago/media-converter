@@ -37,14 +37,14 @@ export const listObjects = async (Prefix) => {
 
   const folders = (result.CommonPrefixes || []).map(cp => ({
     key: cp.Prefix,
-    name: cp.Prefix.split("/").filter(Boolean).pop(), // Get last folder name
+    name: cp.Prefix.split("/").filter(Boolean).pop(), 
   }));
 
   const files = (result.Contents || [])
     .filter(obj => obj.Key !== Prefix)
     .map(obj => ({
       key: obj.Key,
-      name: obj.Key.split("/").pop(), // Just filename
+      name: obj.Key.split("/").pop(), 
       size: formatSize(obj.Size || 0),
     }));
 

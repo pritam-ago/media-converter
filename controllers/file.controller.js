@@ -8,8 +8,11 @@ import {
   generateSignedUrl,
   deleteFolder,
   copyObject,
-  moveObject
+  moveObject,
+  listFolderObjects,
+  getFileStream
 } from '../utils/s3Helpers.js';
+import archiver from 'archiver';
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -163,5 +166,47 @@ export const renameFileOrFolder = async (req, res) => {
     res.status(200).json({ message: 'File or folder renamed successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+export const downloadFolderAsZip = async (req, res) => {
+  const { folder } = req.params;
+  const userId = req.user.id;
+
+  const folderKey = `users/${userId}/${folder}/`;
+
+  try {
+    const objects = await listFolderObjects(folderKey);
+    if (objects.length === 0) {
+      return res.status(404).json({ message: 'Folder not found or empty' });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${folder}.zip"`
+    );
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      res.status(500).send({ message: 'Error creating archive' });
+    });
+
+    archive.pipe(res);
+
+    for (const obj of objects) {
+      if (obj.Key.endsWith('/')) continue;
+
+      const relativePath = obj.Key.replace(folderKey, ''); // make it relative to the zip root
+      const stream = await getFileStream(obj.Key);
+      archive.append(stream, { name: relativePath });
+    }
+
+    await archive.finalize();
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ message: 'Failed to download folder' });
   }
 };

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 export const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1];
+    const token = req.query.token || req.headers['authorization']?.split(' ')[1];
   
     if (!token) {
       return res.status(403).json({ message: 'Token is missing' });

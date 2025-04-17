@@ -8,6 +8,7 @@ import {
   CopyObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import Readable from 'stream';
 
 const formatSize = (bytes) => {
   if (bytes === 0) return "0 Bytes";
@@ -128,4 +129,20 @@ export const moveObject = async (sourceKey, destinationKey) => {
     await copyObject(sourceKey, destinationKey);
     await deleteObject(sourceKey);
   }
+};
+
+export const listFolderObjects = async (folderKey) => {
+  const command = new ListObjectsV2Command({
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Prefix: folderKey.endsWith('/') ? folderKey : `${folderKey}/`,
+  });
+
+  const data = await s3.send(command);
+  return data.Contents || [];
+};
+
+export const getFileStream = async (Key) => {
+  const command = new GetObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key });
+  const response = await s3.send(command);
+  return response.Body;
 };

@@ -9,7 +9,8 @@ import {
   getSignedUrl,
   copyFile,
   moveFile,
-  renameFileOrFolder
+  renameFileOrFolder,
+  downloadFolderAsZip
 } from '../controllers/file.controller.js';
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.get('/url', verifyToken, getSignedUrl);
 router.post('/move', verifyToken, moveFile);
 router.post('/copy', verifyToken, copyFile);
 router.post('/rename', verifyToken, renameFileOrFolder);
+router.get('/download/:folder', verifyToken, downloadFolderAsZip);
 
 export default router;
